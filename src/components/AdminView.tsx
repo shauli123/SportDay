@@ -20,6 +20,37 @@ export default function AdminView() {
         fetchData()
     }, [])
 
+    useEffect(() => {
+        if (selectedStation) {
+            suggestMatch()
+        }
+    }, [selectedStation])
+
+    async function suggestMatch() {
+        const now = new Date()
+        // Find the match for this station that starts before or at 'now' and ends after
+        // Rounds are 20 mins long. 
+        const { data } = await supabase
+            .from('schedule')
+            .select('*')
+            .eq('station_id', selectedStation)
+            .lte('start_time', now.toISOString())
+            .order('start_time', { ascending: false })
+            .limit(1)
+
+        if (data && data[0]) {
+            const match = data[0]
+            // Only suggest if the match is still "current" (within 25 mins of start)
+            const startTime = new Date(match.start_time)
+            const diffMins = (now.getTime() - startTime.getTime()) / (1000 * 60)
+
+            if (diffMins >= 0 && diffMins < 25) {
+                setSelectedTeam(match.team_id)
+                setSelectedOpponent(match.opponent_id || '')
+            }
+        }
+    }
+
     async function fetchData() {
         setLoading(true)
         const [teamsRes, stationsRes, resultsRes] = await Promise.all([

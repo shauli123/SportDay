@@ -6,11 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function TVDashboard() {
     const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
     const [latestResults, setLatestResults] = useState<Result[]>([])
+    const [currentSchedule, setCurrentSchedule] = useState<any[]>([])
+    const [nextRoundSchedule, setNextRoundSchedule] = useState<any[]>([])
 
     useEffect(() => {
         fetchData()
 
-        // Listen for anything
         const channel = supabase.channel('tv_dashboard')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'results' }, () => {
                 fetchData()
@@ -20,11 +21,17 @@ export default function TVDashboard() {
             })
             .subscribe()
 
-        return () => { supabase.removeChannel(channel) }
+        // Refresh schedule alignment every minute
+        const timer = setInterval(() => fetchSchedule(), 60000)
+
+        return () => {
+            supabase.removeChannel(channel)
+            clearInterval(timer)
+        }
     }, [])
 
     async function fetchData() {
-        await Promise.all([fetchLeaderboard(), fetchLatestResults()])
+        await Promise.all([fetchLeaderboard(), fetchLatestResults(), fetchSchedule()])
     }
 
     async function fetchLeaderboard() {
@@ -41,12 +48,39 @@ export default function TVDashboard() {
         if (data) setLatestResults(data as any)
     }
 
+    async function fetchSchedule() {
+        const now = new Date()
+
+        // Fetch ALL schedule entries for current and next rounds
+        const { data } = await supabase
+            .from('schedule')
+            .select('*, teams:team_id(name), opponents:opponent_id(name), stations(name, icon)')
+            .order('start_time', { ascending: true })
+
+        if (data) {
+            const current = data.filter(s => {
+                const start = new Date(s.start_time)
+                const diff = (now.getTime() - start.getTime()) / (1000 * 60)
+                return diff >= 0 && diff < 20
+            })
+
+            const next = data.filter(s => {
+                const start = new Date(s.start_time)
+                const diff = (start.getTime() - now.getTime()) / (1000 * 60)
+                return diff >= 0 && diff < 30 // Preview matches starting in next 30 mins
+            }).slice(0, 6)
+
+            setCurrentSchedule(current)
+            setNextRoundSchedule(next)
+        }
+    }
+
     return (
         <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden">
             <div className="grid grid-cols-12 flex-1 p-6 gap-6">
 
-                {/* Left Column: Leaderboard */}
-                <section className="col-span-8 flex flex-col space-y-4">
+                {/* Left Column: Leaderboard & Current Matches */}
+                <section className="col-span-8 flex flex-col space-y-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-4xl font-black text-glow flex items-center space-x-4 space-x-reverse">
                             <Trophy className="text-yellow-400" size={40} />
@@ -75,7 +109,7 @@ export default function TVDashboard() {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                        className={`grid grid-cols-12 p-5 rounded-2xl items-center transition-all ${idx === 0 ? 'bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/30' :
+                                        className={`grid grid-cols-12 p-5 rounded-2xl items-center transition-all ${idx === 0 ? 'bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.1)]' :
                                             idx === 1 ? 'bg-gradient-to-r from-slate-400/10 to-transparent border border-slate-400/20' :
                                                 idx === 2 ? 'bg-gradient-to-r from-amber-700/10 to-transparent border border-amber-700/20' :
                                                     'bg-white/5 border border-white/5'
@@ -103,19 +137,41 @@ export default function TVDashboard() {
                             </AnimatePresence>
                         </div>
                     </div>
+
+                    {/* Current Round Matches */}
+                    <div className="h-48 glass-card p-6 border-cyan-500/20 flex flex-col">
+                        <h3 className="text-sm font-bold mb-4 text-cyan-400 uppercase tracking-widest flex items-center space-x-2 space-x-reverse">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                            <span>משחקים שמתקיימים כעת</span>
+                        </h3>
+                        <div className="flex-1 grid grid-cols-3 gap-4">
+                            {currentSchedule.map((s) => (
+                                <div key={s.id} className="p-3 rounded-xl bg-cyan-400/5 border border-cyan-400/10 flex flex-col justify-center">
+                                    <div className="text-xs font-bold text-white/40 mb-1">{s.stations?.name}</div>
+                                    <div className="font-black text-lg truncate">
+                                        {s.teams?.name} <span className="text-cyan-500 mx-1">VS</span> {s.opponents?.name || '---'}
+                                    </div>
+                                </div>
+                            ))}
+                            {currentSchedule.length === 0 && (
+                                <div className="col-span-3 flex items-center justify-center text-white/20 italic">
+                                    אין משחקים פעילים כרגע
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </section>
 
-                {/* Right Column: Ticker & QR */}
+                {/* Right Column: Ticker & Status */}
                 <section className="col-span-4 flex flex-col gap-6">
-                    {/* Recent Ticker */}
+                    {/* Recent Ticker with Next Preview */}
                     <div className="glass-card flex-1 p-6 flex flex-col">
-                        <h3 className="text-xl font-bold mb-6 pb-4 border-b border-white/10 flex justify-between items-center">
-                            <span>עדכונים אחרונים</span>
-                            <span className="text-xs font-normal text-white/40">התקבלו הרגע</span>
-                        </h3>
-                        <div className="space-y-4 flex-1">
+                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                            <h3 className="text-xl font-bold">עדכונים אחרונים</h3>
+                        </div>
+                        <div className="space-y-4 flex-1 overflow-y-auto pr-1">
                             <AnimatePresence>
-                                {latestResults.map((r) => (
+                                {latestResults.map((r: Result) => (
                                     <motion.div
                                         key={r.id}
                                         initial={{ opacity: 0, scale: 0.9 }}
@@ -124,8 +180,8 @@ export default function TVDashboard() {
                                         className="p-4 rounded-xl bg-white/5 border-l-4 border-cyan-500 flex items-center justify-between"
                                     >
                                         <div>
-                                            <div className="font-bold">{(r as any).teams?.name}</div>
-                                            <div className="text-xs text-white/50">תחנה: {(r as any).stations?.name}</div>
+                                            <div className="font-bold">{r.teams?.name}</div>
+                                            <div className="text-xs text-white/50">תחנה: {r.stations?.name}</div>
                                         </div>
                                         <div className={`text-xl font-black ${r.is_winner ? 'text-green-400' : 'text-cyan-400'}`}>
                                             +{r.points_earned}
@@ -134,17 +190,30 @@ export default function TVDashboard() {
                                 ))}
                             </AnimatePresence>
                         </div>
+
+                        {/* Next Round Preview */}
+                        <div className="mt-6 pt-6 border-t border-white/10">
+                            <h4 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">בקרוב...</h4>
+                            <div className="space-y-2">
+                                {nextRoundSchedule.map((s) => (
+                                    <div key={s.id} className="text-sm flex justify-between items-center bg-white/5 rounded-lg p-2">
+                                        <span className="text-white/60">{s.stations?.name}</span>
+                                        <span className="font-bold">{s.teams?.name} vs {s.opponents?.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
                     {/* QR Code Section */}
                     <div className="glass-card p-6 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-white/20">
                         <div className="flex flex-col items-center text-center space-y-4">
                             <div className="p-4 bg-white rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                                <QrCode size={120} className="text-black" />
+                                <QrCode size={100} className="text-black" />
                             </div>
                             <div>
                                 <h4 className="font-black text-xl">הדף האישי שלך</h4>
-                                <p className="text-sm text-white/60">סרוק כדי לראות את הניקוד והדירוג של הכיתה שלך</p>
+                                <p className="text-sm text-white/60">סרוק לראות ניקוד ולו"ז אישי</p>
                             </div>
                         </div>
                     </div>

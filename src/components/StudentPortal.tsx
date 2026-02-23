@@ -21,10 +21,13 @@ export default function StudentPortal() {
         return () => { supabase.removeChannel(teamsChannel) }
     }, [])
 
+    const [mySchedule, setMySchedule] = useState<any[]>([])
+
     useEffect(() => {
         if (selectedTeamId) {
             localStorage.setItem('myTeamId', selectedTeamId)
             fetchTeamHistory(selectedTeamId)
+            fetchTeamSchedule(selectedTeamId)
         }
     }, [selectedTeamId])
 
@@ -46,6 +49,22 @@ export default function StudentPortal() {
             .eq('team_id', teamId)
             .order('created_at', { ascending: false })
         if (data) setMyHistory(data)
+    }
+
+    async function fetchTeamSchedule(teamId: string) {
+        const { data } = await supabase
+            .from('schedule')
+            .select('*, stations(name, icon, location), opponents:opponent_id(name)')
+            .or(`team_id.eq.${teamId},opponent_id.eq.${teamId}`)
+            .order('start_time', { ascending: true })
+        if (data) setMySchedule(data)
+    }
+
+    const isLive = (startTimeStr: string) => {
+        const now = new Date()
+        const start = new Date(startTimeStr)
+        const diffMins = (now.getTime() - start.getTime()) / (1000 * 60)
+        return diffMins >= 0 && diffMins < 20
     }
 
     const myTeam = teams.find(t => t.id === selectedTeamId)
@@ -116,6 +135,58 @@ export default function StudentPortal() {
                         <div className="text-xs text-white/40 font-bold">משחקים שבוצעו</div>
                     </div>
                 </div>
+            )}
+
+            {/* Personalized Schedule */}
+            {selectedTeamId && (
+                <section className="space-y-4">
+                    <h3 className="font-bold flex items-center space-x-2 space-x-reverse">
+                        <Calendar size={20} className="text-cyan-400" />
+                        <span>לוח הזמנים של הכיתה</span>
+                    </h3>
+                    <div className="space-y-3">
+                        {mySchedule.map((s) => {
+                            const live = isLive(s.start_time)
+                            const opponent = s.team_id === selectedTeamId ? s.opponents?.name : s.teams?.name
+                            return (
+                                <div
+                                    key={s.id}
+                                    className={`glass-card p-4 border transition-all ${live ? 'border-cyan-500 bg-cyan-500/10 shadow-[0_0_20px_rgba(6,182,212,0.2)] scale-[1.02]' : 'border-white/5'}`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center space-x-3 space-x-reverse">
+                                            <span className="text-2xl">{s.stations?.icon}</span>
+                                            <div>
+                                                <div className="font-bold flex items-center space-x-2 space-x-reverse">
+                                                    <span>{s.stations?.name}</span>
+                                                    {live && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500 text-white animate-pulse">
+                                                            LIVE
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-white/60">
+                                                    {new Date(s.start_time).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="text-[10px] uppercase font-bold text-white/30">יריב</div>
+                                            <div className="font-black text-white/80">{opponent || '-'}</div>
+                                        </div>
+                                    </div>
+                                    {s.stations?.location && (
+                                        <div className="mt-2 pt-2 border-t border-white/5">
+                                            <div className="inline-flex items-center px-2 py-1 rounded bg-white/5 text-[10px] font-bold text-cyan-400 border border-cyan-400/20">
+                                                📍 {s.stations.location}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </section>
             )}
 
             {/* History */}
