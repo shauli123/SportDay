@@ -142,22 +142,34 @@ export default function TVDashboard() {
                         </div>
                     </div>
 
-                    {/* Current Round Matches (Horizontal) */}
-                    <div className="h-24 glass-card p-3 border-cyan-500/20 flex flex-col shrink-0 overflow-hidden">
+                    <div className="h-40 glass-card p-3 border-cyan-500/20 flex flex-col shrink-0 overflow-hidden">
                         <h3 className="text-[10px] font-bold mb-2 text-cyan-400 uppercase tracking-widest flex items-center space-x-2 space-x-reverse">
                             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
                             <span>משחקים כעת</span>
                         </h3>
-                        <div className="flex-1 grid grid-cols-4 gap-3">
-                            {currentSchedule.slice(0, 4).map((s) => (
-                                <div key={s.id} className="p-2 rounded-lg bg-cyan-400/5 border border-cyan-400/10 flex flex-col justify-center">
-                                    <div className="text-[10px] font-bold text-white/40 truncate">{s.stations?.name}</div>
-                                    <div className="font-black text-sm truncate">
-                                        {s.teams?.name} <span className="text-cyan-500 text-[10px]">נגד</span> {s.opponents?.name || '---'}
-                                    </div>
-                                </div>
-                            ))}
-                            {currentSchedule.length === 0 && <div className="col-span-4 flex items-center justify-center text-white/20 text-xs italic">אין משחקים פעילים</div>}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {currentSchedule.map((s) => {
+                                    const start = new Date(s.start_time);
+                                    const end = new Date(start.getTime() + 25 * 60 * 1000);
+                                    return (
+                                        <div key={s.id} className="p-2 rounded-lg bg-cyan-400/5 border border-cyan-400/10 flex flex-col justify-center">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <div className="text-[8px] font-bold text-white/40 truncate">{s.stations?.name}</div>
+                                                <div className="text-[8px] font-mono text-cyan-400/80">
+                                                    {start.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                    -
+                                                    {end.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            </div>
+                                            <div className="font-black text-xs truncate">
+                                                {s.teams?.name} <span className="text-cyan-500 text-[8px]">נגד</span> {s.opponents?.name || '---'}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {currentSchedule.length === 0 && <div className="col-span-full flex items-center justify-center text-white/20 text-xs italic py-4">אין משחקים פעילים</div>}
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -173,37 +185,45 @@ export default function TVDashboard() {
                                     </h3>
                                     <div className="text-[8px] bg-white/10 px-2 py-0.5 rounded uppercase tracking-tighter">צוות {activeTeamIndex % leaderboard.length + 1}</div>
                                 </div>
-                                <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar" style={{ maxHeight: '100%' }}>
-                                    {[...allSchedule]
-                                        .filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id || s.opponent_id === leaderboard[activeTeamIndex % leaderboard.length]?.id)
-                                        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-                                        .map((s: any) => {
-                                            const teamId = leaderboard[activeTeamIndex % leaderboard.length]?.id;
-                                            const vsTeam = s.team_id === teamId ? s.opponents?.name : s.teams?.name;
-                                            const isPast = new Date(s.start_time).getTime() + (25 * 60 * 1000) < currentTime.getTime();
-                                            const isNow = new Date(s.start_time) <= currentTime && currentTime.getTime() <= new Date(s.start_time).getTime() + (25 * 60 * 1000);
+                                <div className="flex-1 overflow-hidden relative">
+                                    <div
+                                        key={`scroll-${activeTeamIndex}`}
+                                        className="space-y-2 absolute inset-0 auto-scroll-content pr-2 custom-scrollbar"
+                                    >
+                                        {[...allSchedule]
+                                            .filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id || s.opponent_id === leaderboard[activeTeamIndex % leaderboard.length]?.id)
+                                            .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+                                            .map((s: any) => {
+                                                const teamId = leaderboard[activeTeamIndex % leaderboard.length]?.id;
+                                                const vsTeam = s.team_id === teamId ? s.opponents?.name : s.teams?.name;
+                                                const end = new Date(new Date(s.start_time).getTime() + 25 * 60 * 1000);
+                                                const isPast = end < currentTime;
+                                                const isNow = new Date(s.start_time) <= currentTime && currentTime <= end;
 
-                                            return (
-                                                <div key={s.id} className={`p-2 rounded-lg border flex flex-col transition-colors ${isNow ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' :
-                                                    isPast ? 'bg-white/5 border-white/5 opacity-40' :
-                                                        'bg-white/5 border-white/10'
-                                                    }`}>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-[10px] font-bold text-white/40">
-                                                            {new Date(s.start_time).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                        {isNow && <span className="text-[8px] font-black uppercase text-cyan-400 animate-pulse">עכשיו!</span>}
+                                                return (
+                                                    <div key={s.id} className={`p-2 rounded-lg border flex flex-col transition-colors ${isNow ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' :
+                                                        isPast ? 'bg-white/5 border-white/5 opacity-40' :
+                                                            'bg-white/5 border-white/10'
+                                                        }`}>
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <span className="text-[10px] font-bold text-white/40">
+                                                                {new Date(s.start_time).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                                -
+                                                                {end.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                            {isNow && <span className="text-[8px] font-black uppercase text-cyan-400 animate-pulse">עכשיו!</span>}
+                                                        </div>
+                                                        <div className="font-bold text-xs truncate">{s.stations?.name}</div>
+                                                        <div className="text-[10px] text-white/60 truncate italic">
+                                                            נגד: {vsTeam || '---'}
+                                                        </div>
                                                     </div>
-                                                    <div className="font-bold text-xs truncate">{s.stations?.name}</div>
-                                                    <div className="text-[10px] text-white/60 truncate italic">
-                                                        נגד: {vsTeam || '---'}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    {allSchedule.filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id || s.opponent_id === leaderboard[activeTeamIndex % leaderboard.length]?.id).length === 0 && (
-                                        <div className="text-center py-8 text-white/20 text-xs italic">אין משחקים מתוזמנים</div>
-                                    )}
+                                                );
+                                            })}
+                                        {allSchedule.filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id || s.opponent_id === leaderboard[activeTeamIndex % leaderboard.length]?.id).length === 0 && (
+                                            <div className="text-center py-8 text-white/20 text-xs italic">אין משחקים מתוזמנים</div>
+                                        )}
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -240,6 +260,19 @@ export default function TVDashboard() {
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
                 @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+                
+                .auto-scroll-content {
+                    animation: auto-scroll 10s linear infinite;
+                }
+
+                @keyframes auto-scroll {
+                    0%, 10% { transform: translateY(0); }
+                    80%, 100% { transform: translateY(min(0px, calc(-100% + 250px))); }
+                }
+
+                .text-glow {
+                    text-shadow: 0 0 10px rgba(6, 182, 212, 0.5), 0 0 20px rgba(6, 182, 212, 0.3);
+                }
             `}</style>
         </div>
     )
