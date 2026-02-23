@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase, type Team, type Station, type Result } from '../lib/supabase'
-import { Trophy, Save, Edit2, Trash2, Search, Loader2 } from 'lucide-react'
+import { Trophy, Save, Trash2, Search, Loader2 } from 'lucide-react'
 
 export default function AdminView() {
     const [teams, setTeams] = useState<Team[]>([])
@@ -40,7 +40,7 @@ export default function AdminView() {
 
         setSaving(true)
         try {
-            const { data, error } = await supabase.rpc('record_match_result', {
+            const { error } = await supabase.rpc('record_match_result', {
                 p_team_id: selectedTeam,
                 p_station_id: selectedStation,
                 p_opponent_id: selectedOpponent || null,
