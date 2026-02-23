@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase, type LeaderboardRow, type Result } from '../lib/supabase'
-import { Trophy, Activity, QrCode } from 'lucide-react'
+import { Trophy, Activity } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function TVDashboard() {
     const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
     const [latestResults, setLatestResults] = useState<Result[]>([])
     const [currentSchedule, setCurrentSchedule] = useState<any[]>([])
     const [nextRoundSchedule, setNextRoundSchedule] = useState<any[]>([])
+
+    const portalUrl = import.meta.env.VITE_PORTAL_URL || window.location.origin
 
     useEffect(() => {
         fetchData()
@@ -74,7 +77,7 @@ export default function TVDashboard() {
     }
 
     return (
-        <div className="h-[calc(100vh-64px)] w-full overflow-hidden flex flex-col bg-background text-white rtl">
+        <div className="min-h-[calc(100vh-64px)] w-full flex flex-col bg-background text-white rtl overflow-hidden">
             <div className="grid grid-cols-12 flex-1 p-6 gap-6 min-h-0">
 
                 {/* Left Column: Leaderboard & Current Matches */}
@@ -207,7 +210,14 @@ export default function TVDashboard() {
                     <div className="glass-card p-6 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-white/20">
                         <div className="flex flex-col items-center text-center space-y-4">
                             <div className="p-4 bg-white rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                                <QrCode size={100} className="text-black" />
+                                {portalUrl && (
+                                    <QRCodeSVG
+                                        value={portalUrl}
+                                        size={100}
+                                        level="H"
+                                        includeMargin={false}
+                                    />
+                                )}
                             </div>
                             <div>
                                 <h4 className="font-black text-xl">הדף האישי שלך</h4>
@@ -219,7 +229,7 @@ export default function TVDashboard() {
             </div>
 
             {/* Ticker Footer */}
-            <footer className="h-12 bg-white/5 border-t border-white/10 flex items-center overflow-hidden">
+            <footer className="h-12 bg-white/5 border-t border-white/10 flex items-center overflow-hidden shrink-0">
                 <div className="whitespace-nowrap flex animate-[marquee_30s_linear_infinite] hover:pause">
                     {leaderboard.map(t => (
                         <span key={t.id} className="inline-flex items-center mx-8 text-sm font-bold">
