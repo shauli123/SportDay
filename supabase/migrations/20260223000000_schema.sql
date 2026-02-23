@@ -61,13 +61,26 @@ alter publication supabase_realtime add table public.results;
 alter publication supabase_realtime add table public.schedule;
 
 -- ============================================================
+-- SEED DATA - Teams
+-- ============================================================
+insert into public.teams (name, grade, color) values
+  ('ז1', 'ז', '#06b6d4'),
+  ('ז2', 'ז', '#0891b2'),
+  ('ח1', 'ח', '#8b5cf6'),
+  ('ח3', 'ח', '#7c3aed'),
+  ('ט1', 'ט', '#ec4899'),
+  ('ט2', 'ט', '#db2777'),
+  ('ט3', 'ט', '#be185d')
+on conflict (name) do nothing;
+
+-- ============================================================
 -- SEED DATA - Stations
 -- ============================================================
 insert into public.stations (name, icon) values
-  ('Basketball', '🏀'),
-  ('Football', '⚽'),
-  ('Volleyball', '🏐'),
-  ('Relay Race', '🏃'),
-  ('Tug of War', '🪢'),
-  ('Dodgeball', '🔴')
+  ('מחניים', '🔴'),
+  ('מרוץ קנגרו', '🦘'),
+  ('משיכה בחבל', '🪢'),
+  ('מרוץ אלונקות', '🚑'),
+  ('כדורעף', '🏐'),
+  ('כדורסל', '🏀')
 on conflict (name) do nothing;
