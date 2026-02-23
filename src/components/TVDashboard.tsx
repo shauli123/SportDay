@@ -30,12 +30,13 @@ export default function TVDashboard() {
             .subscribe()
 
         // Refresh schedule alignment every minute
-        const timer = setInterval(() => fetchSchedule(), 60000)
+        const scheduleTimer = setInterval(() => fetchSchedule(), 60000)
 
         return () => {
             supabase.removeChannel(channel)
             clearInterval(clockInterval)
             clearInterval(rotationInterval)
+            clearInterval(scheduleTimer)
         }
     }, [])
 
