@@ -64,11 +64,9 @@ export default function TVDashboard() {
                 return diff >= 0 && diff < 20
             })
 
-            const next = data.filter(s => {
-                const start = new Date(s.start_time)
-                const diff = (start.getTime() - now.getTime()) / (1000 * 60)
-                return diff >= 0 && diff < 30 // Preview matches starting in next 30 mins
-            }).slice(0, 6)
+            // Fix: If no current match, show matches that haven't started yet
+            const upcoming = data.filter(s => new Date(s.start_time) > now)
+            const next = upcoming.slice(0, 6)
 
             setCurrentSchedule(current)
             setNextRoundSchedule(next)
@@ -76,8 +74,8 @@ export default function TVDashboard() {
     }
 
     return (
-        <div className="flex-1 flex flex-col h-[calc(100vh-64px)] overflow-hidden">
-            <div className="grid grid-cols-12 flex-1 p-6 gap-6">
+        <div className="h-[calc(100vh-64px)] w-full overflow-hidden flex flex-col bg-background text-white rtl">
+            <div className="grid grid-cols-12 flex-1 p-6 gap-6 min-h-0">
 
                 {/* Left Column: Leaderboard & Current Matches */}
                 <section className="col-span-8 flex flex-col space-y-6">
