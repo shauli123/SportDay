@@ -1,22 +1,20 @@
 import { useState, useEffect } from 'react'
-import { supabase, type LeaderboardRow, type Result } from '../lib/supabase'
+import { supabase, type LeaderboardRow } from '../lib/supabase'
 import { Trophy, Activity } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 
 export default function TVDashboard() {
     const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([])
-    const [latestResults, setLatestResults] = useState<Result[]>([])
     const [currentSchedule, setCurrentSchedule] = useState<any[]>([])
     const [allSchedule, setAllSchedule] = useState<any[]>([])
-    const [teams, setTeams] = useState<any[]>([])
     const [activeTeamIndex, setActiveTeamIndex] = useState(0)
     const [currentTime, setCurrentTime] = useState(new Date())
 
     const portalUrl = import.meta.env.VITE_PORTAL_URL || window.location.origin
 
     useEffect(() => {
-        const fetchInterval = fetchData()
+        fetchData()
         const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000)
         const rotationInterval = setInterval(() => {
             setActiveTeamIndex((prev) => (prev + 1))
@@ -48,7 +46,7 @@ export default function TVDashboard() {
     }, [leaderboard])
 
     async function fetchData() {
-        await Promise.all([fetchLeaderboard(), fetchLatestResults(), fetchSchedule()])
+        await Promise.all([fetchLeaderboard(), fetchSchedule()])
     }
 
     async function fetchLeaderboard() {
@@ -56,14 +54,7 @@ export default function TVDashboard() {
         if (data) setLeaderboard(data)
     }
 
-    async function fetchLatestResults() {
-        const { data } = await supabase
-            .from('results')
-            .select('*, teams(name), stations(name)')
-            .order('created_at', { ascending: false })
-            .limit(6)
-        if (data) setLatestResults(data as any)
-    }
+    // Removal of fetchLatestResults
 
     async function fetchSchedule() {
         const now = new Date()
@@ -75,12 +66,22 @@ export default function TVDashboard() {
 
         if (data) {
             setAllSchedule(data)
-            const current = data.filter(s => {
+
+            // Filter current games: either matching current time window OR if no games are now, show the closest upcoming ones
+            let current = data.filter(s => {
                 const start = new Date(s.start_time)
                 const diff = (now.getTime() - start.getTime()) / (1000 * 60)
-                // Assuming a round is 20-25 minutes
                 return diff >= 0 && diff < 25
             })
+
+            if (current.length === 0) {
+                const upcoming = data.filter(s => new Date(s.start_time) > now)
+                if (upcoming.length > 0) {
+                    const nextStartTime = upcoming[0].start_time
+                    current = upcoming.filter(s => s.start_time === nextStartTime)
+                }
+            }
+
             setCurrentSchedule(current)
         }
     }
@@ -152,7 +153,7 @@ export default function TVDashboard() {
                                 <div key={s.id} className="p-2 rounded-lg bg-cyan-400/5 border border-cyan-400/10 flex flex-col justify-center">
                                     <div className="text-[10px] font-bold text-white/40 truncate">{s.stations?.name}</div>
                                     <div className="font-black text-sm truncate">
-                                        {s.teams?.name} <span className="text-cyan-500 text-[10px]">VS</span> {s.opponents?.name || '---'}
+                                        {s.teams?.name} <span className="text-cyan-500 text-[10px]">נגד</span> {s.opponents?.name || '---'}
                                     </div>
                                 </div>
                             ))}
@@ -172,32 +173,35 @@ export default function TVDashboard() {
                                     </h3>
                                     <div className="text-[8px] bg-white/10 px-2 py-0.5 rounded uppercase tracking-tighter">צוות {activeTeamIndex % leaderboard.length + 1}</div>
                                 </div>
-                                <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                                    {allSchedule
-                                        .filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id)
+                                <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar" style={{ maxHeight: '100%' }}>
+                                    {[...allSchedule]
+                                        .filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id || s.opponent_id === leaderboard[activeTeamIndex % leaderboard.length]?.id)
+                                        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
                                         .map((s: any) => {
+                                            const teamId = leaderboard[activeTeamIndex % leaderboard.length]?.id;
+                                            const vsTeam = s.team_id === teamId ? s.opponents?.name : s.teams?.name;
                                             const isPast = new Date(s.start_time).getTime() + (25 * 60 * 1000) < currentTime.getTime();
                                             const isNow = new Date(s.start_time) <= currentTime && currentTime.getTime() <= new Date(s.start_time).getTime() + (25 * 60 * 1000);
 
                                             return (
-                                                <div key={s.id} className={`p-2 rounded-lg border flex flex-col ${isNow ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' :
-                                                        isPast ? 'bg-white/5 border-white/5 opacity-40' :
-                                                            'bg-white/5 border-white/10'
+                                                <div key={s.id} className={`p-2 rounded-lg border flex flex-col transition-colors ${isNow ? 'bg-cyan-500/20 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' :
+                                                    isPast ? 'bg-white/5 border-white/5 opacity-40' :
+                                                        'bg-white/5 border-white/10'
                                                     }`}>
                                                     <div className="flex justify-between items-center mb-1">
                                                         <span className="text-[10px] font-bold text-white/40">
                                                             {new Date(s.start_time).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
-                                                        {isNow && <span className="text-[8px] font-black uppercase text-cyan-400 animate-pulse">משחק כעת!</span>}
+                                                        {isNow && <span className="text-[8px] font-black uppercase text-cyan-400 animate-pulse">עכשיו!</span>}
                                                     </div>
                                                     <div className="font-bold text-xs truncate">{s.stations?.name}</div>
                                                     <div className="text-[10px] text-white/60 truncate italic">
-                                                        נגד: {s.opponents?.name || '---'}
+                                                        נגד: {vsTeam || '---'}
                                                     </div>
                                                 </div>
                                             );
                                         })}
-                                    {allSchedule.filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id).length === 0 && (
+                                    {allSchedule.filter(s => s.team_id === leaderboard[activeTeamIndex % leaderboard.length]?.id || s.opponent_id === leaderboard[activeTeamIndex % leaderboard.length]?.id).length === 0 && (
                                         <div className="text-center py-8 text-white/20 text-xs italic">אין משחקים מתוזמנים</div>
                                     )}
                                 </div>
