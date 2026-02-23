@@ -18,6 +18,7 @@ export interface Station {
   id: string
   name: string
   icon: string
+  location: string | null
 }
 
 export interface Result {
