@@ -8,6 +8,22 @@ type View = 'admin' | 'student' | 'tv'
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('student')
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+
+  const handleAdminClick = () => {
+    if (isAdminAuthenticated) {
+      setCurrentView('admin')
+      return
+    }
+
+    const password = prompt('אנא הזן סיסמת מנהל:')
+    if (password === 'we2010sport') {
+      setIsAdminAuthenticated(true)
+      setCurrentView('admin')
+    } else if (password !== null) {
+      alert('סיסמה שגויה')
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col" dir="rtl">
@@ -48,7 +64,7 @@ function App() {
                 <span className="hidden sm:inline">לוח תוצאות (TV)</span>
               </button>
               <button
-                onClick={() => setCurrentView('admin')}
+                onClick={handleAdminClick}
                 className={`px-3 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 space-x-reverse text-sm font-medium ${currentView === 'admin'
                   ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                   : 'text-white/60 hover:text-purple-400 hover:bg-purple-500/10'
@@ -64,7 +80,7 @@ function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 w-full flex flex-col relative overflow-hidden">
-        {currentView === 'admin' && <AdminView />}
+        {currentView === 'admin' && isAdminAuthenticated && <AdminView />}
         {currentView === 'student' && <StudentPortal />}
         {currentView === 'tv' && <TVDashboard />}
       </main>
