@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase, type LeaderboardRow, type Result } from '../lib/supabase'
 import { Trophy, Activity } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { QRCodeSVG } from 'qrcode.react'
 
 export default function TVDashboard() {
@@ -76,169 +76,126 @@ export default function TVDashboard() {
         }
     }
 
+    const leftColumn = leaderboard.slice(0, Math.ceil(leaderboard.length / 2))
+    const rightColumn = leaderboard.slice(Math.ceil(leaderboard.length / 2))
+
     return (
-        <div className="min-h-[calc(100vh-64px)] w-full flex flex-col bg-background text-white rtl overflow-hidden">
-            <div className="grid grid-cols-12 flex-1 p-6 gap-6 min-h-0">
+        <div className="h-[calc(100vh-64px)] w-full flex flex-col bg-background text-white rtl overflow-hidden">
+            {/* Top Section: Leaderboard + Stats */}
+            <div className="flex-1 grid grid-cols-12 gap-4 p-4 min-h-0 overflow-hidden">
 
-                {/* Left Column: Leaderboard & Current Matches */}
-                <section className="col-span-8 flex flex-col space-y-6">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-4xl font-black text-glow flex items-center space-x-4 space-x-reverse">
-                            <Trophy className="text-yellow-400" size={40} />
-                            <span>טבלת מובילים בזמן אמת</span>
+                {/* Right Column (Wide): Multi-column Leaderboard */}
+                <section className="col-span-12 lg:col-span-9 flex flex-col min-h-0 space-y-3">
+                    <div className="flex items-center justify-between shrink-0">
+                        <h2 className="text-3xl font-black text-glow flex items-center space-x-3 space-x-reverse">
+                            <Trophy className="text-yellow-400" size={32} />
+                            <span>טבלת מובילים</span>
                         </h2>
-                        <div className="flex items-center space-x-2 space-x-reverse text-cyan-400 bg-cyan-400/10 px-4 py-2 rounded-full border border-cyan-400/20">
-                            <Activity size={18} className="animate-pulse" />
-                            <span className="text-sm font-bold uppercase tracking-widest">Live Updates</span>
+                        <div className="flex items-center space-x-2 space-x-reverse text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-full border border-cyan-400/20">
+                            <Activity size={16} className="animate-pulse" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Live</span>
                         </div>
                     </div>
 
-                    <div className="flex-1 glass-card overflow-hidden flex flex-col">
-                        <div className="grid grid-cols-12 p-6 border-b border-white/10 text-xs font-black uppercase tracking-widest text-white/40">
-                            <div className="col-span-1">דירוג</div>
-                            <div className="col-span-6 text-right">כיתה</div>
-                            <div className="col-span-2 text-center">מגמה</div>
-                            <div className="col-span-3 text-left">ניקוד מצטבר</div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                            <AnimatePresence mode="popLayout">
-                                {leaderboard.map((row, idx) => (
-                                    <motion.div
-                                        key={row.id}
-                                        layout
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                        className={`grid grid-cols-12 p-5 rounded-2xl items-center transition-all ${idx === 0 ? 'bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.1)]' :
-                                            idx === 1 ? 'bg-gradient-to-r from-slate-400/10 to-transparent border border-slate-400/20' :
-                                                idx === 2 ? 'bg-gradient-to-r from-amber-700/10 to-transparent border border-amber-700/20' :
-                                                    'bg-white/5 border border-white/5'
-                                            }`}
-                                    >
-                                        <div className="col-span-1">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xl ${idx < 3 ? 'text-white' : 'text-white/40'
-                                                }`}>
-                                                {idx + 1}
-                                            </div>
-                                        </div>
-                                        <div className="col-span-6 text-right">
-                                            <div className="text-2xl font-black">{row.name}</div>
-                                        </div>
-                                        <div className="col-span-2 text-center">
-                                            <div className="text-sm font-bold px-3 py-1 rounded-full bg-white/5 inline-block text-white/60">
-                                                כיתה {row.grade}
-                                            </div>
-                                        </div>
-                                        <div className="col-span-3 text-left">
-                                            <div className="text-3xl font-black tabular-nums">{row.total_points}</div>
-                                        </div>
-                                    </motion.div>
+                    <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4 min-h-0">
+                        {/* Leaderboard Part 1 */}
+                        <div className="glass-card flex flex-col min-h-0 overflow-hidden">
+                            <div className="grid grid-cols-12 p-3 border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-white/40 shrink-0">
+                                <div className="col-span-2">דירוג</div>
+                                <div className="col-span-7">כיתה</div>
+                                <div className="col-span-3 text-left">נקודות</div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+                                {leftColumn.map((row, idx) => (
+                                    <LeaderboardItem key={row.id} row={row} idx={idx} />
                                 ))}
-                            </AnimatePresence>
+                            </div>
+                        </div>
+
+                        {/* Leaderboard Part 2 */}
+                        <div className="glass-card flex flex-col min-h-0 overflow-hidden">
+                            <div className="grid grid-cols-12 p-3 border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-white/40 shrink-0">
+                                <div className="col-span-2">דירוג</div>
+                                <div className="col-span-7">כיתה</div>
+                                <div className="col-span-3 text-left">נקודות</div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+                                {rightColumn.map((row, idx) => (
+                                    <LeaderboardItem key={row.id} row={row} idx={idx + leftColumn.length} />
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Current Round Matches */}
-                    <div className="h-48 glass-card p-6 border-cyan-500/20 flex flex-col">
-                        <h3 className="text-sm font-bold mb-4 text-cyan-400 uppercase tracking-widest flex items-center space-x-2 space-x-reverse">
+                    {/* Current Round Matches (Horizontal) */}
+                    <div className="h-24 glass-card p-3 border-cyan-500/20 flex flex-col shrink-0 overflow-hidden">
+                        <h3 className="text-[10px] font-bold mb-2 text-cyan-400 uppercase tracking-widest flex items-center space-x-2 space-x-reverse">
                             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                            <span>משחקים שמתקיימים כעת</span>
+                            <span>משחקים כעת</span>
                         </h3>
-                        <div className="flex-1 grid grid-cols-3 gap-4">
-                            {currentSchedule.map((s) => (
-                                <div key={s.id} className="p-3 rounded-xl bg-cyan-400/5 border border-cyan-400/10 flex flex-col justify-center">
-                                    <div className="text-xs font-bold text-white/40 mb-1">{s.stations?.name}</div>
-                                    <div className="font-black text-lg truncate">
-                                        {s.teams?.name} <span className="text-cyan-500 mx-1">VS</span> {s.opponents?.name || '---'}
+                        <div className="flex-1 grid grid-cols-4 gap-3">
+                            {currentSchedule.slice(0, 4).map((s) => (
+                                <div key={s.id} className="p-2 rounded-lg bg-cyan-400/5 border border-cyan-400/10 flex flex-col justify-center">
+                                    <div className="text-[10px] font-bold text-white/40 truncate">{s.stations?.name}</div>
+                                    <div className="font-black text-sm truncate">
+                                        {s.teams?.name} <span className="text-cyan-500 text-[10px]">VS</span> {s.opponents?.name || '---'}
                                     </div>
                                 </div>
                             ))}
-                            {currentSchedule.length === 0 && (
-                                <div className="col-span-3 flex items-center justify-center text-white/20 italic">
-                                    אין משחקים פעילים כרגע
-                                </div>
-                            )}
+                            {currentSchedule.length === 0 && <div className="col-span-4 flex items-center justify-center text-white/20 text-xs italic">אין משחקים פעילים</div>}
                         </div>
                     </div>
                 </section>
 
-                {/* Right Column: Ticker & Status */}
-                <section className="col-span-4 flex flex-col gap-6">
-                    {/* Recent Ticker with Next Preview */}
-                    <div className="glass-card flex-1 p-6 flex flex-col">
-                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-                            <h3 className="text-xl font-bold">עדכונים אחרונים</h3>
+                {/* Left Column (Narrow): Updates & QR */}
+                <section className="col-span-12 lg:col-span-3 flex flex-col gap-4 min-h-0 overflow-hidden">
+                    <div className="glass-card flex-1 p-3 flex flex-col min-h-0 overflow-hidden">
+                        <h3 className="text-sm font-bold mb-3 pb-2 border-b border-white/10 shrink-0">עדכונים</h3>
+                        <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                            {latestResults.map((r: any) => (
+                                <div key={r.id} className="p-2 rounded-lg bg-white/5 border-l-2 border-cyan-500 flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <div className="font-bold text-xs truncate">{r.teams?.name}</div>
+                                        <div className="text-[10px] text-white/50 truncate">{r.stations?.name}</div>
+                                    </div>
+                                    <div className="text-sm font-black text-cyan-400">+{r.points_earned}</div>
+                                </div>
+                            ))}
                         </div>
-                        <div className="space-y-4 flex-1 overflow-y-auto pr-1">
-                            <AnimatePresence>
-                                {latestResults.map((r: Result) => (
-                                    <motion.div
-                                        key={r.id}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.8 }}
-                                        className="p-4 rounded-xl bg-white/5 border-l-4 border-cyan-500 flex items-center justify-between"
-                                    >
-                                        <div>
-                                            <div className="font-bold">{r.teams?.name}</div>
-                                            <div className="text-xs text-white/50">תחנה: {r.stations?.name}</div>
-                                        </div>
-                                        <div className={`text-xl font-black ${r.is_winner ? 'text-green-400' : 'text-cyan-400'}`}>
-                                            +{r.points_earned}
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* Next Round Preview */}
-                        <div className="mt-6 pt-6 border-t border-white/10">
-                            <h4 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">בקרוב...</h4>
-                            <div className="space-y-2">
-                                {nextRoundSchedule.map((s) => (
-                                    <div key={s.id} className="text-sm flex justify-between items-center bg-white/5 rounded-lg p-2">
-                                        <span className="text-white/60">{s.stations?.name}</span>
-                                        <span className="font-bold">{s.teams?.name} vs {s.opponents?.name}</span>
+                        {/* Next Round */}
+                        <div className="mt-3 pt-3 border-t border-white/10 shrink-0">
+                            <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">בקרוב</h4>
+                            <div className="space-y-1">
+                                {nextRoundSchedule.slice(0, 3).map((s) => (
+                                    <div key={s.id} className="text-[10px] flex justify-between items-center bg-white/5 rounded p-1.5">
+                                        <span className="text-white/60 truncate">{s.stations?.name}</span>
+                                        <span className="font-bold truncate">{s.teams?.name} vs {s.opponents?.name}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </div>
 
-                    {/* QR Code Section */}
-                    <div className="glass-card p-6 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-white/20">
-                        <div className="flex flex-col items-center text-center space-y-4">
-                            <div className="p-4 bg-white rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                                {portalUrl && (
-                                    <QRCodeSVG
-                                        value={portalUrl}
-                                        size={100}
-                                        level="H"
-                                        includeMargin={false}
-                                    />
-                                )}
-                            </div>
-                            <div>
-                                <h4 className="font-black text-xl">הדף האישי שלך</h4>
-                                <p className="text-sm text-white/60">סרוק לראות ניקוד ולו"ז אישי</p>
-                            </div>
+                    <div className="glass-card p-3 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border-white/20 shrink-0 text-center">
+                        <div className="inline-block p-2 bg-white rounded-lg mb-2">
+                            {portalUrl && <QRCodeSVG value={portalUrl} size={60} level="H" />}
                         </div>
+                        <h4 className="font-black text-sm">הדף האישי</h4>
+                        <p className="text-[9px] text-white/60">סרוק ללו"ז וניקוד אישי</p>
                     </div>
                 </section>
             </div>
 
             {/* Ticker Footer */}
-            <footer className="h-12 bg-white/5 border-t border-white/10 flex items-center overflow-hidden shrink-0">
-                <div className="whitespace-nowrap flex animate-[marquee_30s_linear_infinite] hover:pause">
+            <footer className="h-10 bg-white/5 border-t border-white/10 flex items-center overflow-hidden shrink-0">
+                <div className="whitespace-nowrap flex animate-[marquee_20s_linear_infinite]">
                     {leaderboard.map(t => (
-                        <span key={t.id} className="inline-flex items-center mx-8 text-sm font-bold">
+                        <span key={t.id} className="inline-flex items-center mx-6 text-xs font-bold">
                             {t.name}: <span className="text-cyan-400 mr-1">{t.total_points}</span>
                         </span>
                     ))}
-                    {/* Duplicate for seamless loop */}
                     {leaderboard.map(t => (
-                        <span key={`dup-${t.id}`} className="inline-flex items-center mx-8 text-sm font-bold">
+                        <span key={`dup-${t.id}`} className="inline-flex items-center mx-6 text-xs font-bold">
                             {t.name}: <span className="text-cyan-400 mr-1">{t.total_points}</span>
                         </span>
                     ))}
@@ -246,11 +203,30 @@ export default function TVDashboard() {
             </footer>
 
             <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+                @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+            `}</style>
         </div>
+    )
+}
+
+function LeaderboardItem({ row, idx }: { row: LeaderboardRow, idx: number }) {
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`grid grid-cols-12 p-2 rounded-lg items-center text-sm ${idx === 0 ? 'bg-yellow-500/10 border border-yellow-500/30' :
+                    idx === 1 ? 'bg-slate-400/10 border border-slate-400/20' :
+                        idx === 2 ? 'bg-amber-700/10 border border-amber-700/20' :
+                            'bg-white/5 border border-white/5'
+                }`}
+        >
+            <div className="col-span-2 text-center font-black">#{idx + 1}</div>
+            <div className="col-span-7 pr-2 truncate font-bold">{row.name}</div>
+            <div className="col-span-3 text-left font-black tabular-nums">{row.total_points}</div>
+        </motion.div>
     )
 }
