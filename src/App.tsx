@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Monitor, UserCircle, Settings } from 'lucide-react'
+import { Monitor, UserCircle, Settings, Trophy } from 'lucide-react'
 import AdminView from './components/AdminView'
 import StudentPortal from './components/StudentPortal'
 import TVDashboard from './components/TVDashboard'
+import PodiumView from './components/PodiumView'
 
-type View = 'admin' | 'student' | 'tv'
+type View = 'admin' | 'student' | 'tv' | 'podium'
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('student')
@@ -64,6 +65,16 @@ function App() {
                 <span className="hidden sm:inline">לוח תוצאות (TV)</span>
               </button>
               <button
+                onClick={() => setCurrentView('podium')}
+                className={`px-3 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 space-x-reverse text-sm font-medium ${currentView === 'podium'
+                  ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                  : 'text-white/60 hover:text-yellow-400 hover:bg-yellow-500/10'
+                  }`}
+              >
+                <Trophy size={18} />
+                <span className="hidden sm:inline">פודיום</span>
+              </button>
+              <button
                 onClick={handleAdminClick}
                 className={`px-3 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 space-x-reverse text-sm font-medium ${currentView === 'admin'
                   ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
@@ -83,6 +94,7 @@ function App() {
         {currentView === 'admin' && isAdminAuthenticated && <AdminView />}
         {currentView === 'student' && <StudentPortal />}
         {currentView === 'tv' && <TVDashboard />}
+        {currentView === 'podium' && <PodiumView />}
       </main>
     </div>
   )
